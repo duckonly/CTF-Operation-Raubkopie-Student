@@ -1,0 +1,76 @@
+name: operation-raubkopie-student
+
+services:
+  web:
+    restart: unless-stopped
+    image: ${WEB_IMAGE:?WEB_IMAGE muss gesetzt sein. Starte ueber start.cmd/start.sh in einem exportierten Student-Release oder lege .env aus .env.example an.}
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
+    volumes:
+      - session_data:/sessions
+      - upload_data:/var/www/html/uploads
+      - evidence_data:/var/www/secret
+      - wallet_data:/var/lib/filmfrei-vault
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_USER: filmfrei
+      DB_PASS: streaming123
+      DB_NAME: filmfrei
+      CTF_SECRET: ${CTF_SECRET:?CTF_SECRET muss gesetzt sein. Starte ueber start.cmd/start.sh oder lege .env aus .env.example an.}
+      CTF_SESSION_PATH: /sessions
+      CTF_TEAM_MODE: ${CTF_TEAM_MODE:-single}
+      WEB_PORT: ${WEB_PORT:-8080}
+      HELPER_PORT: ${HELPER_PORT:-8081}
+
+  helper:
+    restart: unless-stopped
+    image: ${WEB_IMAGE:?WEB_IMAGE muss gesetzt sein. Starte ueber start.cmd/start.sh in einem exportierten Student-Release oder lege .env aus .env.example an.}
+    ports:
+      - "127.0.0.1:${HELPER_PORT:-8081}:80"
+    volumes:
+      - session_data:/sessions
+      - upload_data:/var/www/html/uploads
+      - evidence_data:/var/www/secret
+      - wallet_data:/var/lib/filmfrei-vault
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_USER: filmfrei
+      DB_PASS: streaming123
+      DB_NAME: filmfrei
+      CTF_SECRET: ${CTF_SECRET:?CTF_SECRET muss gesetzt sein. Starte ueber start.cmd/start.sh oder lege .env aus .env.example an.}
+      CTF_SESSION_PATH: /sessions
+      CTF_TEAM_MODE: ${CTF_TEAM_MODE:-single}
+      WEB_PORT: ${WEB_PORT:-8080}
+      HELPER_PORT: ${HELPER_PORT:-8081}
+      APP_MODE: helper
+
+  db:
+    restart: unless-stopped
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: filmfrei2024
+      MYSQL_DATABASE: filmfrei
+      MYSQL_USER: filmfrei
+      MYSQL_PASSWORD: streaming123
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pfilmfrei2024"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  db_data:
+  session_data:
+  upload_data:
+  evidence_data:
+  wallet_data:
